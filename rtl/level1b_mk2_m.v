@@ -144,10 +144,10 @@ module level1b_mk2_m (
   // Force keep intermediate nets to preserve strict delay chain for clocks
   (* KEEP="TRUE" *) wire ckdel_1_b;
   (* KEEP="TRUE" *) wire ckdel_2;
-  (* KEEP="TRUE" *) wire ckdel_3_b;  
+  (* KEEP="TRUE" *) wire ckdel_3_b;
   INV    ckdel1   ( .I(bbc_phi0), .O(ckdel_1_b));
   INV    ckdel2   ( .I(ckdel_1_b),    .O(ckdel_2));
-  INV    ckdel3   ( .I(ckdel_2),    .O(ckdel_3_b));  
+  INV    ckdel3   ( .I(ckdel_2),    .O(ckdel_3_b));
   clkctrl_phi2 U_0 (
                     .hsclk_in(hsclk),
                     .lsclk_in(ckdel_1_b),
@@ -163,7 +163,7 @@ module level1b_mk2_m (
 
   assign cpu_phi2_w = !cpu_phi1_w ;
   assign cpu_phi2 =  cpu_phi2_w ;
-  
+
   assign bbc_sync = cpu_vpa & cpu_vda;
   assign irqb = 1'bz;
   assign nmib = 1'bz;
@@ -317,7 +317,7 @@ module level1b_mk2_m (
 	    cpu_data_r = 8'b0  ;
 	    cpu_data_r[`MAP_HSCLK_EN_IDX]      = map_data_q[`MAP_HSCLK_EN_IDX] ;
 	    cpu_data_r[`SHADOW_MEM_IDX]        = map_data_q[`SHADOW_MEM_IDX];
-	    cpu_data_r[`MAP_MOS_IDX]           = map_data_q[`MAP_MOS_IDX];            
+	    cpu_data_r[`MAP_MOS_IDX]           = map_data_q[`MAP_MOS_IDX];
 	    cpu_data_r[`MAP_ROM_IDX]           = map_data_q[`MAP_ROM_IDX];
 	    cpu_data_r[`CLK_CPUCLK_DIV_IDX_HI] = map_data_q[`CLK_CPUCLK_DIV_IDX_HI];
 	    cpu_data_r[`CLK_CPUCLK_DIV_IDX_LO] = map_data_q[`CLK_CPUCLK_DIV_IDX_LO];
