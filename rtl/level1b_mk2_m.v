@@ -387,14 +387,14 @@ module level1b_mk2_m (
 	  map_data_q[`CLK_CPUCLK_DIV_IDX_HI]  <= cpu_data[`CLK_CPUCLK_DIV_IDX_HI];
 	  map_data_q[`CLK_CPUCLK_DIV_IDX_LO]  <= cpu_data[`CLK_CPUCLK_DIV_IDX_LO];
         end
-        else if (cpld_reg_sel_q[`CPLD_REG_SEL_BBC_PAGEREG_IDX] & !cpu_rnw ) begin
+        if (cpld_reg_sel_q[`CPLD_REG_SEL_BBC_PAGEREG_IDX] & !cpu_rnw ) begin
           bbc_pagereg_q <= cpu_data;
 `ifdef MASTER_EXTRA_CTRL
           ram_at_8000 <= cpu_data[7];
 `endif
         end
 `ifdef MASTER_SHADOW_SELECT
-        else if (cpld_reg_sel_q[`CPLD_REG_SEL_BBC_SHADOW_IDX] & !cpu_rnw ) begin
+        if (cpld_reg_sel_q[`CPLD_REG_SEL_BBC_SHADOW_IDX] & !cpu_rnw ) begin
 `ifdef MASTER_SHADOW_CTRL
           map_data_q[`SHADOW_MEM_IDX] <= cpu_data[`SHADOW_MEM_IDX];
 `endif
