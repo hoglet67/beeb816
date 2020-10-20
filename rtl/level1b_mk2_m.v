@@ -21,6 +21,9 @@
 // Define this for the Acorn Electron instead of BBC Micro
 // `define ELECTRON 1
 //
+// Define this for BBC B+/Master Extra RAM control
+`define MASTER_EXTRA_CTRL 1
+//
 // Define this for BBC B+/Master Shadow RAM control
 //`define MASTER_SHADOW_CTRL 1
 //
@@ -34,6 +37,15 @@
 // Define this to use fast reads/slow writes to Shadow as with the VRAM to simplify decoding
 //`define CACHED_SHADOW_RAM 1
 
+
+// If either of the Master modes are included, then we need the selects for the &FE34 latch
+`ifdef MASTER_SHADOW_CTRL
+ `define MASTER_SHADOW_SELECT 1
+`endif
+`ifdef MASTER_EXTRA_CTRL
+ `define MASTER_SHADOW_SELECT 1
+`endif
+
 `define MAP_CC_DATA_SZ         8
 `define SHADOW_MEM_IDX         7
 `define MAP_MOS_IDX            5
@@ -45,7 +57,7 @@
 `define BBC_PAGEREG_SZ         4    // only the bottom four ROM selection bits
 `define GPIO_SZ                3
 
-`ifdef MASTER_SHADOW_CTRL
+`ifdef MASTER_SHADOW_SELECT
 `define CPLD_REG_SEL_SZ        3
 `define CPLD_REG_SEL_BBC_SHADOW_IDX 2
 `else
@@ -141,6 +153,10 @@ module level1b_mk2_m (
   wire                                 himem_w;
   wire                                 hisync_w;
 
+`ifdef MASTER_EXTRA_CTRL
+  reg                                  ram_at_8000;
+  reg                                  ram_at_c000;
+`endif
   // Force keep intermediate nets to preserve strict delay chain for clocks
   (* KEEP="TRUE" *) wire ckdel_1_b;
   (* KEEP="TRUE" *) wire ckdel_2;
@@ -203,7 +219,7 @@ module level1b_mk2_m (
   // bits since it's stable by the end of phi1
   assign cpld_reg_sel_d[`CPLD_REG_SEL_MAP_CC_IDX] =  ( cpu_data[7:6]== 2'b10);
   assign cpld_reg_sel_d[`CPLD_REG_SEL_BBC_PAGEREG_IDX] = (cpu_data[7]== 1'b0) && ( cpu_adr == `PAGED_ROM_SEL );
-`ifdef MASTER_SHADOW_CTRL
+`ifdef MASTER_SHADOW_SELECT
   assign cpld_reg_sel_d[`CPLD_REG_SEL_BBC_SHADOW_IDX] = (cpu_data[7]== 1'b0) && ( cpu_adr == `SHADOW_RAM_SEL );
 `endif
 
@@ -258,10 +274,25 @@ module level1b_mk2_m (
     remapped_rom47_access_r = 0;
     remapped_romCF_access_r = 0;
     if (!cpu_data[7] & cpu_adr[15] & (cpu_vpa|cpu_vda)) begin
+
+`ifdef MASTER_EXTRA_CTRL
+      // If !ram_at_c000 then remap C000-FBFF
+      // If  ram_at_c000 then remap E000-FBFF
+      // (i.e. If ram_at_c000 then cpu_adr[13] needs to be 1)
+      if ( cpu_adr[14] & (cpu_adr[13] | !ram_at_c000) & !(&(cpu_adr[13:10])) & map_data_q[`MAP_MOS_IDX] )
+`else
       // Remap MOS from C000-FBFF only (exclude IO space and vectors)
       if ( cpu_adr[14] & !(&(cpu_adr[13:10])) & map_data_q[`MAP_MOS_IDX] )
+`endif
         remapped_mos_access_r = 1;
+`ifdef MASTER_EXTRA_CTRL
+      // If !ram_at_8000 then remap 8000-BFFF
+      // If  ram_at_8000 then remap 9000-BFFF
+      // (i.e. If ram_at_8000 then cpu_adr[13:12] needs to be > 0)
+      else if (!cpu_adr[14] & map_data_q[`MAP_ROM_IDX]  & ((|cpu_adr[13:12]) | !ram_at_8000)) begin
+`else
       else if (!cpu_adr[14] & map_data_q[`MAP_ROM_IDX] ) begin
+`endif
         if ( bbc_pagereg_q[3:2] == 2'b11)
           remapped_romCF_access_r = 1;
         else if (bbc_pagereg_q[3:2] == 2'b01)
@@ -356,11 +387,21 @@ module level1b_mk2_m (
 	  map_data_q[`CLK_CPUCLK_DIV_IDX_HI]  <= cpu_data[`CLK_CPUCLK_DIV_IDX_HI];
 	  map_data_q[`CLK_CPUCLK_DIV_IDX_LO]  <= cpu_data[`CLK_CPUCLK_DIV_IDX_LO];
         end
-        else if (cpld_reg_sel_q[`CPLD_REG_SEL_BBC_PAGEREG_IDX] & !cpu_rnw )
+        else if (cpld_reg_sel_q[`CPLD_REG_SEL_BBC_PAGEREG_IDX] & !cpu_rnw ) begin
           bbc_pagereg_q <= cpu_data;
+`ifdef MASTER_EXTRA_CTRL
+          ram_at_8000 <= cpu_data[7];
+`endif
+        end
+`ifdef MASTER_SHADOW_SELECT
+        else if (cpld_reg_sel_q[`CPLD_REG_SEL_BBC_SHADOW_IDX] & !cpu_rnw ) begin
 `ifdef MASTER_SHADOW_CTRL
-        else if (cpld_reg_sel_q[`CPLD_REG_SEL_BBC_SHADOW_IDX] & !cpu_rnw )
           map_data_q[`SHADOW_MEM_IDX] <= cpu_data[`SHADOW_MEM_IDX];
+`endif
+`ifdef MASTER_EXTRA_CTRL
+          ram_at_c000 <= cpu_data[3];
+`endif
+        end
 `endif
       end // else: !if( !resetb )
 
