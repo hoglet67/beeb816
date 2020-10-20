@@ -218,9 +218,9 @@ module level1b_mk2_m (
   // rising edge of cpu_phi1 - use the cpu_data bus directly for the high address
   // bits since it's stable by the end of phi1
   assign cpld_reg_sel_d[`CPLD_REG_SEL_MAP_CC_IDX] =  ( cpu_data[7:6]== 2'b10);
-  assign cpld_reg_sel_d[`CPLD_REG_SEL_BBC_PAGEREG_IDX] = (cpu_data[7]== 1'b0) && ( cpu_adr == `PAGED_ROM_SEL );
+  assign cpld_reg_sel_d[`CPLD_REG_SEL_BBC_PAGEREG_IDX] = (cpu_data[7]== 1'b0) && ( {cpu_adr[15:2], 2'b0} == `PAGED_ROM_SEL );
 `ifdef MASTER_SHADOW_SELECT
-  assign cpld_reg_sel_d[`CPLD_REG_SEL_BBC_SHADOW_IDX] = (cpu_data[7]== 1'b0) && ( cpu_adr == `SHADOW_RAM_SEL );
+  assign cpld_reg_sel_d[`CPLD_REG_SEL_BBC_SHADOW_IDX] = (cpu_data[7]== 1'b0) && ( {cpu_adr[15:2], 2'b0} == `SHADOW_RAM_SEL );
 `endif
 
   // Force dummy read access when accessing himem explicitly but not for remapped RAM accesses which can still complete
