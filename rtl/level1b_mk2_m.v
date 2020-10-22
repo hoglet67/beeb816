@@ -36,6 +36,10 @@
 //
 // Define this to use fast reads/slow writes to Shadow as with the VRAM to simplify decoding
 //`define CACHED_SHADOW_RAM 1
+//
+// Define this to include the individual clock divider control bits
+//`define ENABLE_DIV2
+//`define ENABLE_DIV4
 
 
 // If either of the Master modes are included, then we need the selects for the &FE34 latch
@@ -126,6 +130,7 @@ module level1b_mk2_m (
   reg [ `CPLD_REG_SEL_SZ-1:0]          cpld_reg_sel_q;
   // This will be a copy of the BBC ROM page register so we know which ROM is selected
   reg [`BBC_PAGEREG_SZ-1:0]            bbc_pagereg_q;
+
   reg [`MAP_CC_DATA_SZ-1:0]            map_data_q;
   reg                                  remapped_rom47_access_r ;
   reg                                  remapped_romCF_access_r ;
@@ -384,8 +389,12 @@ module level1b_mk2_m (
 	  map_data_q[`SHADOW_MEM_IDX]         <= cpu_data[`SHADOW_MEM_IDX];
 	  map_data_q[`MAP_MOS_IDX]            <= cpu_data[`MAP_MOS_IDX];
 	  map_data_q[`MAP_ROM_IDX]            <= cpu_data[`MAP_ROM_IDX];
+`ifdef ENABLE_DIV4
 	  map_data_q[`CLK_CPUCLK_DIV_IDX_HI]  <= cpu_data[`CLK_CPUCLK_DIV_IDX_HI];
+`endif
+`ifdef ENABLE_DIV2
 	  map_data_q[`CLK_CPUCLK_DIV_IDX_LO]  <= cpu_data[`CLK_CPUCLK_DIV_IDX_LO];
+`endif
         end
         if (cpld_reg_sel_q[`CPLD_REG_SEL_BBC_PAGEREG_IDX] & !cpu_rnw ) begin
           bbc_pagereg_q <= cpu_data;
