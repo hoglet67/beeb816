@@ -26,6 +26,11 @@
 // clock switch
 `define DEGLITCH_CLOCK_IN 1
 
+// Define this for Master RAM overlay at 8000
+//`define MASTER_RAM_8000 1
+
+// Define this for Master RAM overlay at C000
+//`define MASTER_RAM_C000 1
 
 // Define this to use fast reads/slow writes to Shadow as with the VRAM to simplify decoding
 //`define CACHED_SHADOW_RAM 1
@@ -148,6 +153,12 @@ module level1b_mk2_m (
 `ifdef PIPELINE_ROM_CTRL
   reg                                  map_rom_cf_q;
   reg                                  map_rom_47_q;
+ `endif
+`ifdef MASTER_RAM_8000
+  reg                                  ram_at_8000;
+`endif
+`ifdef MASTER_RAM_C000
+  reg                                  ram_at_c000;
 `endif
   wire                                 io_access_pipe_d;
   wire                                 himem_vram_wr_d;
@@ -313,22 +324,40 @@ module level1b_mk2_m (
 `ifdef PIPELINE_ROM_CTRL
     if (!cpu_data[7] & cpu_adr[15] & (cpu_vpa|cpu_vda) ) begin
       if (!cpu_adr[14]) begin
+`ifdef MASTER_RAM_8000
+        remapped_romCF_access_r = map_rom_cf_q & (cpu_adr[12] | cpu_adr[13] | !ram_at_8000);
+        remapped_rom47_access_r = map_rom_47_q & (cpu_adr[12] | cpu_adr[13] | !ram_at_8000);
+`else
         remapped_romCF_access_r = map_rom_cf_q;
         remapped_rom47_access_r = map_rom_47_q;
+`endif
       end
       // Remap MOS from C000-FBFF only (exclude IO space and vectors)
       else
+`ifdef MASTER_RAM_C000
+        remapped_mos_access_r = !(&(cpu_adr[13:10])) & (cpu_adr[13] | !ram_at_c000) & map_data_q[`MAP_ROM_IDX];
+`else
         remapped_mos_access_r = !(&(cpu_adr[13:10])) & map_data_q[`MAP_ROM_IDX];
+`endif
     end
 `else
     if (!cpu_data[7] & cpu_adr[15] & (cpu_vpa|cpu_vda) & map_data_q[`MAP_ROM_IDX]) begin
        if (!cpu_adr[14]) begin
+`ifdef MASTER_RAM_8000
+         remapped_romCF_access_r = (bbc_pagereg_q[3:2] == 2'b11) & (cpu_adr[12] | cpu_adr[13] | !ram_at_8000);
+         remapped_rom47_access_r = (bbc_pagereg_q[3:2] == 2'b01) & (cpu_adr[12] | cpu_adr[13] | !ram_at_8000);
+`else
          remapped_romCF_access_r = (bbc_pagereg_q[3:2] == 2'b11) ;
          remapped_rom47_access_r = (bbc_pagereg_q[3:2] == 2'b01) ;
+`endif
        end
        // Remap MOS from C000-FBFF only (exclude IO space and vectors)
        else
+`ifdef MASTER_RAM_C000
+         remapped_mos_access_r = !(&(cpu_adr[13:10])) & (cpu_adr[13] | !ram_at_c000);
+`else
          remapped_mos_access_r = !(&(cpu_adr[13:10]));
+`endif
      end
 `endif
   end
@@ -407,6 +436,12 @@ module level1b_mk2_m (
       begin
         map_data_q <= {`MAP_CC_DATA_SZ{1'b0}};
         bbc_pagereg_q <= {`BBC_PAGEREG_SZ{1'b0}};
+`ifdef MASTER_RAM_8000
+        ram_at_8000 <= 1'b0;
+`endif
+`ifdef MASTER_RAM_C000
+        ram_at_c000 <= 1'b0;
+`endif
       end
     else
       begin
@@ -422,10 +457,17 @@ module level1b_mk2_m (
 	  map_data_q[`CLK_CPUCLK_DIV_IDX_HI]  <= cpu_data[`CLK_CPUCLK_DIV_IDX_HI];
 	  map_data_q[`CLK_CPUCLK_DIV_IDX_LO]  <= cpu_data[`CLK_CPUCLK_DIV_IDX_LO];
         end
-        else if (cpld_reg_sel_w[`CPLD_REG_SEL_BBC_PAGEREG_IDX] & !cpu_rnw )
+        else if (cpld_reg_sel_w[`CPLD_REG_SEL_BBC_PAGEREG_IDX] & !cpu_rnw ) begin
           bbc_pagereg_q <= cpu_data;
-        else if (cpld_reg_sel_w[`CPLD_REG_SEL_BBC_SHADOW_IDX] & !cpu_rnw )
+`ifdef MASTER_RAM_8000
+          ram_at_8000 <= cpu_data[7];
+`endif
+        end else if (cpld_reg_sel_w[`CPLD_REG_SEL_BBC_SHADOW_IDX] & !cpu_rnw ) begin
           map_data_q[`SHADOW_MEM_IDX] <= cpu_data[`SHADOW_MEM_IDX];
+`ifdef MASTER_RAM_C000
+          ram_at_c000 <= cpu_data[3];
+`endif
+        end
       end // else: !if( !resetb )
 
   // Flop all the internal register sel bits on falling edge of phi1

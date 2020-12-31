@@ -27,7 +27,7 @@ module cpld_jnr (
   reg [11:0]                   bbc_adr_lat_q;
 
   assign bbc_adr = bbc_adr_lat_q;
-  assign dec_shadow_reg = (`BPLUS_MODE) ? (cpu_adr==`BPLUS_SHADOW_RAM_SEL) : 1'b0;
+  assign dec_shadow_reg = ((`BPLUS_MODE) | (`MASTER_MODE)) ? (cpu_adr==`BPLUS_SHADOW_RAM_SEL) : 1'b0;
   assign dec_rom_reg = (`ELK_MODE)? (cpu_adr==`ELK_PAGED_ROM_SEL) : (cpu_adr==`PAGED_ROM_SEL);
 
   // Flag FE4x (VIA) accesses and also all &FC, &FD expansion pages
