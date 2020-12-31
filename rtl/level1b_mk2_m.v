@@ -179,14 +179,14 @@ module level1b_mk2_m (
   assign tp = { sw_rdy_w, cpu_phi2 };
 `endif
 
-  
+
 `ifdef DEGLITCH_CLOCK_IN
   // Deglitch PHI0 input for feeding to clock switch only
-  (* KEEP="TRUE" *) wire ckdel_1_b;  
+  (* KEEP="TRUE" *) wire ckdel_1_b;
   (* KEEP="TRUE" *) wire ckdel_2;
   (* KEEP="TRUE" *) wire ckdel_3;
   (* KEEP="TRUE" *) wire ckdel_4;
-  INV    ckdel0   ( .I(bbc_phi0), .O(ckdel_1_b));  
+  INV    ckdel0   ( .I(bbc_phi0), .O(ckdel_1_b));
   INV    ckdel2   ( .I(ckdel_1_b), .O(ckdel_2));
   BUF    ckdel3   ( .I(ckdel_2), .O(ckdel_3));
   BUF    ckdel4   ( .I(ckdel_3), .O(ckdel_4));
