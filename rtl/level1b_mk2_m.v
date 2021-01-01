@@ -160,6 +160,7 @@ module level1b_mk2_m (
 `ifdef MASTER_RAM_C000
   reg                                  ram_at_c000;
 `endif
+  reg                                  rdy_q;
   wire                                 io_access_pipe_d;
   wire                                 himem_vram_wr_d;
 
@@ -470,12 +471,16 @@ module level1b_mk2_m (
         end
       end // else: !if( !resetb )
 
+  // Sample Rdy at the start of the cycle, so it remains stable for the remainder of the cycle
+  always @ ( negedge cpu_phi2_w)
+    rdy_q <= rdy;
+
   // Flop all the internal register sel bits on falling edge of phi1
   always @ ( posedge cpu_phi2_w or negedge resetb )
     if ( !resetb )
         cpld_reg_sel_q <= {`CPLD_REG_SEL_SZ{1'b0}};
     else
-        cpld_reg_sel_q <= (rdy & cpu_vda) ? cpld_reg_sel_d : {`CPLD_REG_SEL_SZ{1'b0}};
+        cpld_reg_sel_q <= (rdy_q & cpu_vda) ? cpld_reg_sel_d : {`CPLD_REG_SEL_SZ{1'b0}};
 
 `ifdef PIPELINE_ROM_CTRL
     always @ ( negedge cpu_phi2_w or negedge resetb )
@@ -528,7 +533,7 @@ module level1b_mk2_m (
 
   // Latches for the high address bits open during PHI1
   always @ ( * )
-    if ( rdy & !cpu_phi2_w )
+    if ( rdy & rdy_q & !cpu_phi2_w )
       begin
         cpu_hiaddr_lat_q <= cpu_hiaddr_lat_d ;
         cpu_a15_lat_q <= cpu_a15_lat_d;
